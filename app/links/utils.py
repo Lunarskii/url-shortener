@@ -2,7 +2,7 @@ import string
 from typing import LiteralString
 
 
-BASE62: LiteralString = string.ascii_letters + string.digits
+BASE62: LiteralString = string.digits + string.ascii_letters
 BASE62_LEN: int = len(BASE62)
 
 
