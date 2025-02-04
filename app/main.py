@@ -1,19 +1,16 @@
 import uvicorn
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 
 from app.links.router import router as links_router
+from app.core.exc_handlers import setup_exception_handlers
+
 
 app = FastAPI(
     title='URL Shortener',
     version="0.1",
 )
 app.include_router(links_router)
-
-
-@app.get("/favicon.ico")
-async def favicon() -> JSONResponse:
-    return JSONResponse(content={}, status_code=204)
+setup_exception_handlers(app)
 
 
 if __name__ == '__main__':
