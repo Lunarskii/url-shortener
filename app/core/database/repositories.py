@@ -31,20 +31,24 @@ class BaseAlchemyRepository[M: BaseDAO, S: BaseModel](ABC):
             return None
         return self.schema_type.model_validate(instance)
 
-    async def get_all(self) -> list[S]:
-        stmt = select(self.model_type)
+    async def get_all(self, **data: Any) -> list[S]:
+        stmt = select(self.model_type).filter_by(**data)
         result: Result = await self.session.execute(stmt)
         instances = result.scalars().all()
-        return [self.schema_type.model_validate(instance) for instance in instances]
+        return list(map(self.schema_type.model_validate, instances))
 
-    async def update(self, id_: int, **data: Any) -> S:
-        instance = await self.session.get_one(self.model_type, id_)
+    async def update(self, id_: int, **data: Any) -> S | None:
+        instance = await self.session.get(self.model_type, id_)
+        if instance is None:
+            return None
         instance.update(**data)
         await self.session.commit()
         return self.schema_type.model_validate(instance)
 
-    async def delete(self, id_: int) -> S:
-        instance = await self.session.get_one(self.model_type, id_)
+    async def delete(self, id_: int) -> S | None:
+        instance = await self.session.get(self.model_type, id_)
+        if instance is None:
+            return None
         await self.session.delete(instance)
         await self.session.commit()
         return self.schema_type.model_validate(instance)
