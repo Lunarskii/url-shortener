@@ -1,4 +1,7 @@
 from fastapi import status
+from fastapi.responses import JSONResponse
+
+from .schemas import ErrorResponse
 
 
 class ApplicationError(Exception):
@@ -31,10 +34,12 @@ class ApplicationError(Exception):
         return f'{class_name}(message="{self.message}", error_code={self.error_code}, status_code={self.status_code})'
 
 
-class UnexpectedError(ApplicationError):
+class UnexpectedErrorResponse(JSONResponse):
     def __init__(self):
         super().__init__(
-            message="Internal Server Error",
-            error_code="unexpected_error",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                msg="Internal Server Error",
+                code="unexpected_error",
+            ).model_dump(mode="json"),
         )
