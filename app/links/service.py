@@ -12,7 +12,10 @@ from .schemas import (
     LinkDTO,
 )
 from .utils import base62_encode
-from .exceptions import URLMustBeAccessibleError
+from .exceptions import (
+    URLMustBeAccessibleError,
+    URLRestricted,
+)
 
 
 async def validate_url_access(url: str) -> bool:
@@ -43,6 +46,8 @@ class LinkService:
             raise URLMustBeAccessibleError()
 
         if old_link := await self.repository.get_by_full_url(link.full_url):
+            if not old_link.is_active:
+                raise URLRestricted()
             return old_link
         else:
             new_link = LinkDAO(full_url=link.full_url)
@@ -55,9 +60,24 @@ class LinkService:
 
     async def get_link(self, short_url: str) -> LinkDTO | None:
         if link := await self.repository.get_by_short_url(short_url):
+            if not link.is_active:
+                raise URLRestricted()
             await self.repository.update_by_full_url(
                 full_url=link.full_url,
                 count_requests=link.count_requests + 1,
             )
             return link
         return None
+
+    async def deactivate_link(self, short_url: str):
+        if link := await self.repository.get_by_short_url(short_url):
+            await self.repository.update(link.id, is_active=False)
+
+    async def activate_link(self, short_url: str):
+        if link := await self.repository.get_by_short_url(short_url):
+            await self.repository.update(link.id, is_active=True)
+
+    async def get_links(self, is_active: bool | None = None) -> list[LinkDTO]:
+        if is_active is not None:
+            return await self.repository.get_all(is_active=is_active)
+        return await self.repository.get_all()

@@ -6,6 +6,7 @@ from fastapi import (
     Depends,
     Path,
     Request,
+    Query,
 )
 from fastapi.responses import (
     RedirectResponse,
@@ -29,13 +30,37 @@ router = APIRouter(
 )
 
 
-@router.post("/shorten/", status_code=status.HTTP_200_OK)
+@router.post("/shorten/")
 async def shorten_link(
     link: ShortLinkCreateDTO,
     session: Annotated[AsyncSession, Depends(scoped_session_dependency)],
     service: Annotated[LinkService, Depends(link_service_dependency)],
 ) -> LinkDTO:
     return await service.shorten_url(link, session)
+
+
+@router.get("/list/")
+async def get_links(
+    service: Annotated[LinkService, Depends(link_service_dependency)],
+    is_active: Annotated[bool | None, Query] = None,
+) -> list[LinkDTO]:
+    return await service.get_links(is_active)
+
+
+@router.get("/{short_url}/deactivate/")
+async def deactivate_link(
+    short_url: Annotated[str, Path],
+    service: Annotated[LinkService, Depends(link_service_dependency)],
+) -> None:
+    await service.deactivate_link(short_url)
+
+
+@router.get("/{short_url}/activate/")
+async def activate_link(
+    short_url: Annotated[str, Path],
+    service: Annotated[LinkService, Depends(link_service_dependency)],
+) -> None:
+    await service.activate_link(short_url)
 
 
 @router.get("/{short_url}/")
