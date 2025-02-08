@@ -1,10 +1,7 @@
 from abc import ABC
 from typing import Any
 
-from sqlalchemy import (
-    select,
-    Result,
-)
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
@@ -33,8 +30,7 @@ class BaseAlchemyRepository[M: BaseDAO, S: BaseModel](ABC):
 
     async def get_all(self, **data: Any) -> list[S]:
         stmt = select(self.model_type).filter_by(**data)
-        result: Result = await self.session.execute(stmt)
-        instances = result.scalars().all()
+        instances = await self.session.scalars(stmt)
         return list(map(self.schema_type.model_validate, instances))
 
     async def update(self, id_: int, **data: Any) -> S | None:
