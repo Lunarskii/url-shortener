@@ -35,8 +35,8 @@ def get_async_session_factory(
     )
 
 
-async_engine = get_async_engine()
-async_session_factory = get_async_session_factory(async_engine)
+async_engine: AsyncEngine = get_async_engine()
+async_session_factory: async_sessionmaker[AsyncSession] = get_async_session_factory(async_engine)
 
 
 def get_async_scoped_session():
