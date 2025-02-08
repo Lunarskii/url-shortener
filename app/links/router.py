@@ -51,16 +51,16 @@ async def get_links(
 async def deactivate_link(
     short_url: Annotated[str, Path],
     service: Annotated[LinkService, Depends(link_service_dependency)],
-) -> None:
-    await service.deactivate_link(short_url)
+) -> LinkDTO | None:
+    return await service.deactivate_link(short_url)
 
 
 @router.get("/{short_url}/activate/")
 async def activate_link(
     short_url: Annotated[str, Path],
     service: Annotated[LinkService, Depends(link_service_dependency)],
-) -> None:
-    await service.activate_link(short_url)
+) -> LinkDTO | None:
+    return await service.activate_link(short_url)
 
 
 @router.get("/{short_url}/")

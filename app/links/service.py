@@ -1,8 +1,6 @@
+from typing import Literal
+
 import httpx
-from pydantic import (
-    AnyHttpUrl,
-    ValidationError,
-)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import LinkDAO
@@ -18,16 +16,6 @@ from .exceptions import (
 )
 
 
-async def validate_url_access(url: str) -> bool:
-    try:
-        url = str(AnyHttpUrl(url))
-        async with httpx.AsyncClient() as client:
-            await client.head(url, follow_redirects=True)
-    except (ValidationError, httpx.ConnectError):
-        return False
-    return True
-
-
 class LinkService:
     def __init__(
         self,
@@ -41,16 +29,50 @@ class LinkService:
         else:
             raise ValueError("A session or repository is required. None of them are defined.")
 
-    async def shorten_url(self, link: ShortLinkCreateDTO, session: AsyncSession) -> LinkDTO:
-        if not validate_url_access(link.full_url):
-            raise URLMustBeAccessibleError()
+    @classmethod
+    def _normalize_url(
+        cls,
+        url: str,
+        protocol: Literal["http", "https"] = "https",
+    ) -> str:
+        if not url.startswith(("http://", "https://")):
+            url = f"{protocol}://{url}"
+        return url
 
-        if old_link := await self.repository.get_by_full_url(link.full_url):
+    @classmethod
+    def _change_url_protocol(
+        cls,
+        url: str,
+        protocol: Literal["http", "https"] = "https",
+    ) -> str:
+        if url.startswith("http://") and protocol == "https":
+            url = url.replace("http", protocol, 1)
+        elif url.startswith("https://") and protocol == "http":
+            url = url.replace("https", protocol, 1)
+        return url
+
+    @classmethod
+    async def _validate_url(cls, url: str) -> bool:
+        try:
+            async with httpx.AsyncClient(timeout=5, follow_redirects=True) as client:
+                await client.head(url)
+        except (httpx.ConnectError, httpx.UnsupportedProtocol, httpx.ConnectTimeout):
+            return False
+        return True
+
+    async def shorten_url(self, link: ShortLinkCreateDTO, session: AsyncSession) -> LinkDTO:
+        url = self._normalize_url(link.full_url, "http")
+        if not await self._validate_url(url):
+            url = self._change_url_protocol(url, "https")
+            if not await self._validate_url(url):
+                raise URLMustBeAccessibleError()
+
+        if old_link := await self.repository.get_by_full_url(url):
             if not old_link.is_active:
                 raise URLRestricted()
             return old_link
         else:
-            new_link = LinkDAO(full_url=link.full_url)
+            new_link = LinkDAO(full_url=url)
             session.add(new_link)
             await session.flush()
             short_url = base62_encode(new_link.id)
@@ -67,15 +89,14 @@ class LinkService:
                 count_requests=link.count_requests + 1,
             )
             return link
-        return None
 
-    async def deactivate_link(self, short_url: str):
+    async def deactivate_link(self, short_url: str) -> LinkDTO | None:
         if link := await self.repository.get_by_short_url(short_url):
-            await self.repository.update(link.id, is_active=False)
+            return await self.repository.update(link.id, is_active=False)
 
-    async def activate_link(self, short_url: str):
+    async def activate_link(self, short_url: str) -> LinkDTO | None:
         if link := await self.repository.get_by_short_url(short_url):
-            await self.repository.update(link.id, is_active=True)
+            return await self.repository.update(link.id, is_active=True)
 
     async def get_links(self, is_active: bool | None = None) -> list[LinkDTO]:
         if is_active is not None:
