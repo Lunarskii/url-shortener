@@ -8,9 +8,7 @@ from .repositories import LinkRepository
 from .service import LinkService
 
 
-async def link_repository_dependency(
-    session: Annotated[AsyncSession, Depends(scoped_session_dependency)]
-):
+async def link_repository_dependency(session: Annotated[AsyncSession, Depends(scoped_session_dependency)]):
     return LinkRepository(session)
 
 

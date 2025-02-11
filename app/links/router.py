@@ -12,16 +12,13 @@ from fastapi.responses import (
     RedirectResponse,
     Response,
 )
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database.dependencies import scoped_session_dependency
 from .service import LinkService
 from .schemas import (
     LinkDTO,
     ShortLinkCreateDTO,
 )
 from .dependencies import link_service_dependency
-from .exceptions import URLNotFoundError
 
 
 router = APIRouter(
@@ -33,10 +30,9 @@ router = APIRouter(
 @router.post("/shorten/")
 async def shorten_link(
     link: ShortLinkCreateDTO,
-    session: Annotated[AsyncSession, Depends(scoped_session_dependency)],
     service: Annotated[LinkService, Depends(link_service_dependency)],
 ) -> LinkDTO:
-    return await service.shorten_url(link, session)
+    return await service.shorten_url(link)
 
 
 @router.get("/list/")
@@ -77,4 +73,3 @@ async def open_link(
             url=link.full_url,
             status_code=status.HTTP_308_PERMANENT_REDIRECT,
         )
-    raise URLNotFoundError()
