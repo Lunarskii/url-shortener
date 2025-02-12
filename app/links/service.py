@@ -9,6 +9,7 @@ from .utils import base62_encode
 from .exceptions import (
     URLRestricted,
     URLNotFoundError,
+    URLCannotBeEmpty,
 )
 
 
@@ -32,6 +33,8 @@ class LinkService:
         return url
 
     async def shorten_url(self, link: ShortLinkCreateDTO) -> LinkDTO:
+        if not link.full_url:
+            raise URLCannotBeEmpty()
         url = self._normalize_url(link.full_url)
         if old_link := await self.repository.get_by_full_url(url):
             if not old_link.is_active:

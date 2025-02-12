@@ -10,7 +10,7 @@ from pydantic import (
 class LinkDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: Annotated[int, Field(exclude=True)]
+    id: Annotated[int, Field(exclude=True, default=-1)]
     full_url: str
     short_url: str
     count_requests: int

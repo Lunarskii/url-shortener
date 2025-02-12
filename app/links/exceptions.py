@@ -14,3 +14,9 @@ class URLRestricted(ApplicationError):
     message = "URL restricted"
     error_code = "url_restricted"
     status_code = status.HTTP_403_FORBIDDEN
+
+
+class URLCannotBeEmpty(ApplicationError):
+    message = "URL cannot be empty"
+    error_code = "url_cannot_be_empty"
+    status_code = status.HTTP_400_BAD_REQUEST
